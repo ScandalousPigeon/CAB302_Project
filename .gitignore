@@ -37,3 +37,12 @@ build/
 
 ### Mac OS ###
 .DS_Store
+# Logs
+*.log
+logs/
+
+# IntelliJ build output
+out/
+
+# OS generated files
+Thumbs.db
