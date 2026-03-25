@@ -1,3 +1,1 @@
-hello hello
-
-i havent made .gitignore yet
+A application to help beginner programmers by giving them hints rather than solutions.
