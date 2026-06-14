@@ -54,6 +54,16 @@ class PuzzleGenerationServiceTest {
     }
 
     @Test
+    void generatePuzzlePromptContainsSafetyGuardrails() {
+        FakeLLMClient fakeLLM = new FakeLLMClient(validLLMResponse());
+        PuzzleGenerationService service = new PuzzleGenerationService(fakeLLM);
+
+        service.generatePuzzle("strings", "MEDIUM");
+
+        assertTrue(fakeLLM.getLastPrompt().contains("Safety guardrails"));
+    }
+
+    @Test
     void generatePuzzleParsesStructuredLLMResponseIntoGeneratedPuzzle() {
         FakeLLMClient fakeLLM = new FakeLLMClient(validLLMResponse());
         PuzzleGenerationService service = new PuzzleGenerationService(fakeLLM);
@@ -165,7 +175,7 @@ class PuzzleGenerationServiceTest {
                 () -> service.generatePuzzle("arrays", "EASY")
         );
 
-        assertEquals("Could not parse generated puzzle response.", exception.getMessage());
+        assertEquals("Generated puzzle response failed safety guardrail.", exception.getMessage());
     }
 
     @Test
@@ -181,6 +191,32 @@ class PuzzleGenerationServiceTest {
         );
 
         assertSame(failure, exception);
+    }
+
+    @Test
+    void generatePuzzleBlocksUnsafeTopicsBeforeCallingLLM() {
+        FakeLLMClient fakeLLM = new FakeLLMClient(validLLMResponse());
+        PuzzleGenerationService service = new PuzzleGenerationService(fakeLLM);
+
+        assertThrows(
+                RuntimeException.class,
+                () -> service.generatePuzzle("malware that steals passwords", "EASY")
+        );
+
+        assertEquals(0, fakeLLM.getCallCount());
+    }
+
+    @Test
+    void generatePuzzleRejectsUnsafeModelResponses() {
+        FakeLLMClient fakeLLM = new FakeLLMClient(validLLMResponse() + "\nThis puzzle teaches phishing.");
+        PuzzleGenerationService service = new PuzzleGenerationService(fakeLLM);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.generatePuzzle("arrays", "EASY")
+        );
+
+        assertTrue(exception.getMessage().contains("safety guardrail"));
     }
 
     private static void assertTestCase(
