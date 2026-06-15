@@ -8,11 +8,13 @@ import org.w3c.dom.NodeList;
 
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DashboardControllerTest {
 
@@ -26,6 +28,19 @@ class DashboardControllerTest {
         assertNotNull(backButton, "Dashboard should have a Back to Home button");
         assertEquals("#onBackToHome", backButton.getAttribute("onAction"));
         assertEquals(void.class, handler.getReturnType());
+    }
+
+    @Test
+    void dashboardKeepsAchievementLabelsAndBadgeStyles() throws Exception {
+        Document document = readFxml(DASHBOARD_FXML);
+        String css = readResource("/com/example/syntaxio/css/base.css");
+
+        assertNotNull(findElementByFxId(document, "Label", "achievement1Label"));
+        assertNotNull(findElementByFxId(document, "Label", "achievement2Label"));
+        assertNotNull(findElementByFxId(document, "Label", "achievement3Label"));
+        assertNotNull(findElementByFxId(document, "Label", "achievement4Label"));
+        assertTrue(css.contains(".achievement-unlocked"));
+        assertTrue(css.contains(".achievement-locked"));
     }
 
     private static Element findButtonByText(String text) throws Exception {
@@ -42,6 +57,19 @@ class DashboardControllerTest {
         return null;
     }
 
+    private static Element findElementByFxId(Document document, String tagName, String fxId) {
+        NodeList elements = document.getElementsByTagName(tagName);
+
+        for (int i = 0; i < elements.getLength(); i++) {
+            Element element = (Element) elements.item(i);
+            if (fxId.equals(element.getAttribute("fx:id"))) {
+                return element;
+            }
+        }
+
+        return null;
+    }
+
     private static Document readFxml(String path) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
@@ -49,6 +77,13 @@ class DashboardControllerTest {
         try (InputStream stream = DashboardControllerTest.class.getResourceAsStream(path)) {
             assertNotNull(stream, "Missing test resource: " + path);
             return factory.newDocumentBuilder().parse(stream);
+        }
+    }
+
+    private static String readResource(String path) throws Exception {
+        try (InputStream stream = DashboardControllerTest.class.getResourceAsStream(path)) {
+            assertNotNull(stream, "Missing test resource: " + path);
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 }
