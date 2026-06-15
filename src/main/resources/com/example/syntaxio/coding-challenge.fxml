@@ -4,12 +4,15 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
@@ -49,15 +52,40 @@
                      <children>
                         <HBox fx:id="descriptionTabs" prefHeight="47.0" prefWidth="583.0" styleClass="tab-bar" stylesheets="@css/coding-challenge.css">
                            <children>
-                              <ToggleButton fx:id="descriptionTab" mnemonicParsing="false" styleClass="tab-button" stylesheets="@css/coding-challenge.css" text="Description" />
-                              <ToggleButton fx:id="aiAssistantTab" mnemonicParsing="false" styleClass="tab-button" stylesheets="@css/coding-challenge.css" text="AI Assistant" />
+                              <ToggleButton fx:id="descriptionTab" mnemonicParsing="false" onAction="#showDescriptionTab" selected="true" styleClass="tab-button" stylesheets="@css/coding-challenge.css" text="Description" />
+                              <ToggleButton fx:id="aiAssistantTab" mnemonicParsing="false" onAction="#showAiAssistantTab" styleClass="tab-button" stylesheets="@css/coding-challenge.css" text="AI Assistant" />
                            </children>
                         </HBox>
-                        <TextArea fx:id="descriptionArea" editable="false" prefHeight="705.0" prefWidth="543.0" styleClass="description-area" stylesheets="@css/coding-challenge.css" wrapText="true">
+                        <StackPane prefHeight="761.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
+                           <children>
+                              <TextArea fx:id="descriptionArea" editable="false" prefHeight="705.0" prefWidth="543.0" styleClass="description-area" stylesheets="@css/coding-challenge.css" wrapText="true">
+                                 <StackPane.margin>
+                                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                                 </StackPane.margin>
+                              </TextArea>
+                              <VBox fx:id="aiAssistantView" managed="false" prefHeight="705.0" prefWidth="543.0" spacing="12.0" styleClass="assistant-view" visible="false">
+                                 <children>
+                                    <ScrollPane fx:id="assistantScrollPane" fitToWidth="true" prefHeight="612.0" prefWidth="543.0" styleClass="assistant-scroll" VBox.vgrow="ALWAYS">
+                                       <content>
+                                          <VBox fx:id="assistantMessages" spacing="12.0" styleClass="assistant-messages" />
+                                       </content>
+                                    </ScrollPane>
+                                    <HBox alignment="CENTER" prefHeight="52.0" spacing="10.0" styleClass="assistant-input-row">
+                                       <children>
+                                          <TextField fx:id="assistantInput" onAction="#handleAssistantMessage" promptText="Ask for a hint or debugging help..." styleClass="assistant-input" HBox.hgrow="ALWAYS" />
+                                          <Button fx:id="assistantSendButton" mnemonicParsing="false" onAction="#handleAssistantMessage" prefWidth="72.0" styleClass="assistant-send-button" text="Send" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                                 <StackPane.margin>
+                                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                                 </StackPane.margin>
+                              </VBox>
+                           </children>
                            <VBox.margin>
-                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                              <Insets />
                            </VBox.margin>
-                        </TextArea>
+                        </StackPane>
                      </children>
                      <HBox.margin>
                         <Insets />
