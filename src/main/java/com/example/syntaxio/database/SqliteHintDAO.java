@@ -93,5 +93,35 @@ public class SqliteHintDAO {
             System.err.println("Error getting hint history: " + e.getMessage());
         }
         return hints;
-    }    
+    }
+
+    public List<Hint> getUserHintHistory(int userId) {
+        List<Hint> hints = new ArrayList<>();
+        String sql = "SELECT * FROM hints WHERE userId = ? ORDER BY requestedAt DESC";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                hints.add(mapHint(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting user hint history: " + e.getMessage());
+        }
+        return hints;
+    }
+
+    private Hint mapHint(ResultSet rs) throws SQLException {
+        Hint hint = new Hint(
+                rs.getString("challengeId"),
+                rs.getString("hintText"),
+                rs.getString("hintType"),
+                rs.getInt("confidence")
+        );
+        hint.setId(rs.getString("id"));
+        hint.setWasHelpful(rs.getInt("wasHelpful") == 1);
+        hint.setRequestedAt(LocalDateTime.parse(rs.getString("requestedAt")));
+        return hint;
+    }
 }

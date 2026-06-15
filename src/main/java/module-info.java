@@ -15,4 +15,5 @@ module com.example.syntaxio {
     exports com.example.syntaxio.database;
     exports com.example.syntaxio.model;
     exports com.example.syntaxio.ai;
+    exports com.example.syntaxio.progress;
 }
