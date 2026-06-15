@@ -43,6 +43,16 @@ class DashboardControllerTest {
         assertTrue(css.contains(".achievement-locked"));
     }
 
+    @Test
+    void exportProgressButtonIsWiredToControllerHandler() throws Exception {
+        Element exportButton = findButtonByText("Export Progress");
+        Method handler = DashboardController.class.getDeclaredMethod("onExportProgress");
+
+        assertNotNull(exportButton, "Dashboard should have an Export Progress button");
+        assertEquals("#onExportProgress", exportButton.getAttribute("onAction"));
+        assertEquals(void.class, handler.getReturnType());
+    }
+
     private static Element findButtonByText(String text) throws Exception {
         Document document = readFxml(DASHBOARD_FXML);
         NodeList buttons = document.getElementsByTagName("Button");

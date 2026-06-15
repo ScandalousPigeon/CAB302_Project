@@ -4,6 +4,7 @@ import com.example.syntaxio.achievements.AchievementService;
 import com.example.syntaxio.database.SessionManager;
 import com.example.syntaxio.database.SqliteChallengeDAO;
 import com.example.syntaxio.database.SqliteSolutionDAO;
+import com.example.syntaxio.export.ProgressReportExporter;
 import com.example.syntaxio.model.Achievement;
 import com.example.syntaxio.model.Challenge;
 import com.example.syntaxio.model.Solution;
@@ -18,10 +19,12 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -71,6 +74,7 @@ public class DashboardController {
     private SqliteChallengeDAO challengeDAO;
     private SqliteSolutionDAO solutionDAO;
     private AchievementService achievementService;
+    private ProgressReportExporter progressReportExporter;
 
     @FXML
     public void initialize() {
@@ -78,6 +82,7 @@ public class DashboardController {
         challengeDAO = new SqliteChallengeDAO();
         solutionDAO = new SqliteSolutionDAO();
         achievementService = new AchievementService();
+        progressReportExporter = new ProgressReportExporter();
 
         configureCharts();
 
@@ -149,6 +154,41 @@ public class DashboardController {
                 stats.totalSubmissions(),
                 stats.hintsUsed()
         ));
+    }
+
+    @FXML
+    private void onExportProgress() {
+        User currentUser = sessionManager.getCurrentUser();
+        if (currentUser == null) {
+            showInfo("Export Progress", "Sign in to export your progress report.");
+            return;
+        }
+
+        ChoiceDialog<String> dialog = new ChoiceDialog<>("CSV", List.of("CSV", "PDF"));
+        dialog.setTitle("Export Progress");
+        dialog.setHeaderText("Choose a report format");
+        dialog.setContentText("Format:");
+
+        dialog.showAndWait().ifPresent(format -> exportProgress(currentUser, format));
+    }
+
+    private void exportProgress(User user, String format) {
+        List<Challenge> challenges = challengeDAO.getAllChallenges();
+        List<Solution> solutions = solutionDAO.getSolutionsByUserId(user.getId());
+        DashboardStats stats = buildStats(user, challenges, solutions);
+        List<Achievement> achievements = achievementService.evaluate(challenges, solutions, stats.hintsUsed());
+
+        try {
+            Path outputFile = "PDF".equals(format)
+                    ? progressReportExporter.exportPdf(user, challenges, solutions, achievements,
+                    progressReportExporter.downloadsDirectory())
+                    : progressReportExporter.exportCsv(user, challenges, solutions, achievements,
+                    progressReportExporter.downloadsDirectory());
+
+            showInfo("Export Progress", "Report saved to:\n" + outputFile);
+        } catch (IOException e) {
+            showInfo("Export Progress", "Could not export progress report: " + e.getMessage());
+        }
     }
 
     private void configureCharts() {
