@@ -4,6 +4,7 @@ import com.example.syntaxio.database.SessionManager;
 import com.example.syntaxio.database.SqliteChallengeDAO;
 import com.example.syntaxio.database.SqliteInProgressChallengeDAO;
 import com.example.syntaxio.database.SqliteSolutionDAO;
+import com.example.syntaxio.database.SqliteUserDAO;
 import com.example.syntaxio.model.Challenge;
 import com.example.syntaxio.model.InProgressChallenge;
 import com.example.syntaxio.model.Solution;
@@ -60,6 +61,7 @@ public class CodingChallengeController {
     private SqliteChallengeDAO challengeDAO;
     private SqliteSolutionDAO solutionDAO;
     private SqliteInProgressChallengeDAO inProgressChallengeDAO;
+    private SqliteUserDAO userDAO;
     private SessionManager sessionManager;
     private Challenge currentChallenge;
     private ScreenSwitcher screenSwitcher = ScreenManager::switchScreen;
@@ -75,6 +77,7 @@ public class CodingChallengeController {
         challengeDAO = new SqliteChallengeDAO();
         solutionDAO = new SqliteSolutionDAO();
         inProgressChallengeDAO = new SqliteInProgressChallengeDAO();
+        userDAO = new SqliteUserDAO();
         sessionManager = SessionManager.getInstance();
 
         loadingIndicator.setVisible(false);
@@ -86,6 +89,7 @@ public class CodingChallengeController {
         currentChallenge = challengeDAO.getChallengeById(challengeId);
         if (currentChallenge != null) {
             displayChallenge();
+            rememberLastPuzzle();
             startStopwatch();
         } else {
             showError("Challenge not found!");
@@ -259,6 +263,17 @@ public class CodingChallengeController {
                 currentChallenge.getId(),
                 codeEditor.getText()
         );
+    }
+
+    private void rememberLastPuzzle() {
+        User currentUser = sessionManager == null ? null : sessionManager.getCurrentUser();
+        if (currentUser == null || currentChallenge == null || userDAO == null) {
+            return;
+        }
+
+        if (userDAO.updateLastPuzzle(currentUser.getId(), currentChallenge.getId())) {
+            currentUser.setLastPuzzleId(currentChallenge.getId());
+        }
     }
 
     private void removeCurrentProgress(int userId) {

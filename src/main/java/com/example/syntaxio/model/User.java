@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class User {
     private int id;                   
     private String username;
+    private String displayName;
     private String passwordHash;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
@@ -20,6 +21,8 @@ public class User {
     private int totalHintsUsed;
     private int totalChallengesCompleted;
     private int currentActivityStreak;
+    private int experiencePoints;
+    private String lastPuzzleId;
 
     /**
      * Creates a new user before it has been assigned a database id.
@@ -33,6 +36,7 @@ public class User {
     public User(String username, String passwordHash) {
         LocalDateTime now = LocalDateTime.now();
         this.username = username;
+        this.displayName = username;
         this.passwordHash = passwordHash;
         this.createdAt = now;
         this.lastLoginAt = now;
@@ -41,6 +45,7 @@ public class User {
         this.totalHintsUsed = 0;
         this.totalChallengesCompleted = 0;
         this.currentActivityStreak = 0;
+        this.experiencePoints = 0;
     }
 
     /**
@@ -61,7 +66,7 @@ public class User {
                 LocalDateTime createdAt, LocalDateTime lastLoginAt,
                 int totalHintsUsed, int totalChallengesCompleted) {
         this(id, username, passwordHash, createdAt, lastLoginAt, lastLoginAt, 0,
-                totalHintsUsed, totalChallengesCompleted, 0);
+                totalHintsUsed, totalChallengesCompleted, 0, totalChallengesCompleted * 100, null);
     }
 
     /**
@@ -84,7 +89,7 @@ public class User {
                 LocalDateTime updatedAt, int loginCount,
                 int totalHintsUsed, int totalChallengesCompleted) {
         this(id, username, passwordHash, createdAt, lastLoginAt, updatedAt, loginCount,
-                totalHintsUsed, totalChallengesCompleted, 0);
+                totalHintsUsed, totalChallengesCompleted, 0, totalChallengesCompleted * 100, null);
     }
 
     /**
@@ -106,8 +111,21 @@ public class User {
                 LocalDateTime updatedAt, int loginCount,
                 int totalHintsUsed, int totalChallengesCompleted,
                 int currentActivityStreak) {
+        this(id, username, passwordHash, createdAt, lastLoginAt, updatedAt, loginCount,
+                totalHintsUsed, totalChallengesCompleted, currentActivityStreak,
+                totalChallengesCompleted * 100, null);
+    }
+
+    // Constructor for LOADING from database (with user data storage fields)
+    public User(int id, String username, String passwordHash,
+                LocalDateTime createdAt, LocalDateTime lastLoginAt,
+                LocalDateTime updatedAt, int loginCount,
+                int totalHintsUsed, int totalChallengesCompleted,
+                int currentActivityStreak, int experiencePoints,
+                String lastPuzzleId) {
         this.id = id;
         this.username = username;
+        this.displayName = username;
         this.passwordHash = passwordHash;
         this.createdAt = createdAt;
         this.lastLoginAt = lastLoginAt;
@@ -116,6 +134,20 @@ public class User {
         this.totalHintsUsed = totalHintsUsed;
         this.totalChallengesCompleted = totalChallengesCompleted;
         this.currentActivityStreak = currentActivityStreak;
+        this.experiencePoints = experiencePoints;
+        this.lastPuzzleId = lastPuzzleId;
+    }
+
+    public User(int id, String username, String displayName, String passwordHash,
+                LocalDateTime createdAt, LocalDateTime lastLoginAt,
+                LocalDateTime updatedAt, int loginCount,
+                int totalHintsUsed, int totalChallengesCompleted,
+                int currentActivityStreak, int experiencePoints,
+                String lastPuzzleId) {
+        this(id, username, passwordHash, createdAt, lastLoginAt, updatedAt, loginCount,
+                totalHintsUsed, totalChallengesCompleted, currentActivityStreak,
+                experiencePoints, lastPuzzleId);
+        this.displayName = normalizeDisplayName(displayName, username);
     }
 
     /**
@@ -145,6 +177,22 @@ public class User {
      * @param username the new username
      */
     public void setUsername(String username) { this.username = username; }
+
+    /**
+     * Returns the display name shown in profile and dashboard UI.
+     *
+     * @return the display name
+     */
+    public String getDisplayName() { return displayName; }
+
+    /**
+     * Updates the display name shown in profile and dashboard UI.
+     *
+     * @param displayName the new display name
+     */
+    public void setDisplayName(String displayName) {
+        this.displayName = normalizeDisplayName(displayName, username);
+    }
 
     /**
      * Returns the stored password hash.
@@ -263,6 +311,36 @@ public class User {
     }
 
     /**
+     * Returns the user's stored experience points.
+     *
+     * @return the experience points
+     */
+    public int getExperiencePoints() { return experiencePoints; }
+
+    /**
+     * Updates the user's stored experience points.
+     *
+     * @param experiencePoints the new experience points value
+     */
+    public void setExperiencePoints(int experiencePoints) {
+        this.experiencePoints = Math.max(0, experiencePoints);
+    }
+
+    /**
+     * Returns the id of the most recently opened puzzle.
+     *
+     * @return the last puzzle id, or {@code null} if none has been recorded
+     */
+    public String getLastPuzzleId() { return lastPuzzleId; }
+
+    /**
+     * Updates the id of the most recently opened puzzle.
+     *
+     * @param lastPuzzleId the new last puzzle id
+     */
+    public void setLastPuzzleId(String lastPuzzleId) { this.lastPuzzleId = lastPuzzleId; }
+
+    /**
      * Increments the total hints used counter by one.
      */
     public void incrementHintsUsed() {
@@ -274,5 +352,10 @@ public class User {
      */
     public void incrementChallengesCompleted() {
         this.totalChallengesCompleted++;
-    }  
+        this.experiencePoints += 100;
+    }
+
+    private static String normalizeDisplayName(String displayName, String username) {
+        return displayName == null || displayName.isBlank() ? username : displayName.trim();
+    }
 }

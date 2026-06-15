@@ -53,8 +53,9 @@ class AccountCreationTest {
 
         try (Connection connection = SqliteConnection.getInstance();
              PreparedStatement statement = connection.prepareStatement("""
-                     SELECT username, password_hash, created_at, last_login_at, updated_at,
-                            login_count, last_login_date, total_login_count, total_challenges_completed
+                     SELECT username, display_name, password_hash, created_at, last_login_at, updated_at,
+                            login_count, last_login_date, total_login_count, total_challenges_completed,
+                            experience_points, last_puzzle_id
                      FROM users
                      WHERE username = ?
                      """)) {
@@ -64,6 +65,7 @@ class AccountCreationTest {
                 assertTrue(resultSet.next(), "Expected a row for the newly created account");
 
                 String username = resultSet.getString("username");
+                String displayName = resultSet.getString("display_name");
                 String passwordHash = resultSet.getString("password_hash");
                 String createdAtValue = resultSet.getString("created_at");
                 String lastLoginAtValue = resultSet.getString("last_login_at");
@@ -72,6 +74,8 @@ class AccountCreationTest {
                 String lastLoginDate = resultSet.getString("last_login_date");
                 int totalLoginCount = resultSet.getInt("total_login_count");
                 int totalChallengesCompleted = resultSet.getInt("total_challenges_completed");
+                int experiencePoints = resultSet.getInt("experience_points");
+                String lastPuzzleId = resultSet.getString("last_puzzle_id");
 
                 LocalDateTime createdAt = parseDateTime(createdAtValue);
                 LocalDateTime lastLoginAt = parseDateTime(lastLoginAtValue);
@@ -79,6 +83,7 @@ class AccountCreationTest {
 
                 assertAll(
                         () -> assertEquals(USERNAME, username),
+                        () -> assertEquals(USERNAME, displayName),
                         () -> assertEquals(PasswordHasher.hashPassword(PASSWORD), passwordHash),
                         () -> assertNotEquals(PASSWORD, passwordHash),
                         () -> assertFalse(createdAtValue.isBlank()),
@@ -89,7 +94,9 @@ class AccountCreationTest {
                         () -> assertEquals(createdAt.toLocalDate().toString(), lastLoginDate),
                         () -> assertEquals(0, loginCount),
                         () -> assertEquals(0, totalLoginCount),
-                        () -> assertEquals(0, totalChallengesCompleted)
+                        () -> assertEquals(0, totalChallengesCompleted),
+                        () -> assertEquals(0, experiencePoints),
+                        () -> assertNull(lastPuzzleId)
                 );
             }
         }
@@ -193,6 +200,39 @@ class AccountCreationTest {
 
         assertTrue(loadedUser.isPresent());
         assertEquals(5, loadedUser.orElseThrow().getCurrentActivityStreak());
+    }
+
+    @Test
+    void userDaoStoresDisplayNameExperienceAndLastPuzzle() {
+        SessionManager sessionManager = SessionManager.getInstance();
+
+        assertTrue(sessionManager.signup(USERNAME, PASSWORD));
+        var loadedUser = sessionManager.getUserDAO().findUserByUsername(USERNAME).orElseThrow();
+        loadedUser.setDisplayName("Diu888");
+        loadedUser.setExperiencePoints(450);
+        loadedUser.setLastPuzzleId("ch-001");
+
+        assertTrue(sessionManager.getUserDAO().updateUser(loadedUser));
+
+        var updatedUser = sessionManager.getUserDAO().findUserByUsername(USERNAME).orElseThrow();
+        assertAll(
+                () -> assertEquals("Diu888", updatedUser.getDisplayName()),
+                () -> assertEquals(450, updatedUser.getExperiencePoints()),
+                () -> assertEquals("ch-001", updatedUser.getLastPuzzleId())
+        );
+    }
+
+    @Test
+    void updateLastPuzzlePersistsMostRecentChallenge() {
+        SessionManager sessionManager = SessionManager.getInstance();
+
+        assertTrue(sessionManager.signup(USERNAME, PASSWORD));
+        var loadedUser = sessionManager.getUserDAO().findUserByUsername(USERNAME).orElseThrow();
+
+        assertTrue(sessionManager.getUserDAO().updateLastPuzzle(loadedUser.getId(), "ch-002"));
+
+        var updatedUser = sessionManager.getUserDAO().findUserByUsername(USERNAME).orElseThrow();
+        assertEquals("ch-002", updatedUser.getLastPuzzleId());
     }
 
     private void assertIntegerColumnsEqualZero(ResultSet resultSet, String... columnNames) throws SQLException {
