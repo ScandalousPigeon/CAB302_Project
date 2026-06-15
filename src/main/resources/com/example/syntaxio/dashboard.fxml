@@ -35,6 +35,7 @@
                                     <Region HBox.hgrow="ALWAYS" />
                                     <Button mnemonicParsing="false" onAction="#onRefresh" prefHeight="44.0" prefWidth="110.0" styleClass="content-card" text="Refresh" textFill="WHITE" />
                                     <Button mnemonicParsing="false" onAction="#onBrowseChallenges" prefHeight="44.0" prefWidth="170.0" styleClass="content-card" text="Browse Challenges" textFill="WHITE" />
+                                    <Button mnemonicParsing="false" onAction="#onExportProgress" prefHeight="44.0" prefWidth="150.0" styleClass="content-card" text="Export Progress" textFill="WHITE" />
                                     <Button mnemonicParsing="false" onAction="#onShowDetailedStats" prefHeight="44.0" prefWidth="128.0" styleClass="content-card" text="Details" textFill="WHITE" />
                                     <Button mnemonicParsing="false" onAction="#onLogout" prefHeight="44.0" prefWidth="96.0" styleClass="content-card" text="Logout" textFill="WHITE" />
                                  </children>
