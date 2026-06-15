@@ -1,8 +1,11 @@
 package com.example.syntaxio.ui.controller;
 
+import com.example.syntaxio.achievements.AchievementService;
 import com.example.syntaxio.database.SessionManager;
 import com.example.syntaxio.database.SqliteChallengeDAO;
 import com.example.syntaxio.database.SqliteSolutionDAO;
+import com.example.syntaxio.export.ProgressReportExporter;
+import com.example.syntaxio.model.Achievement;
 import com.example.syntaxio.model.Challenge;
 import com.example.syntaxio.model.Solution;
 import com.example.syntaxio.model.User;
@@ -16,10 +19,12 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -68,12 +73,16 @@ public class DashboardController {
     private SessionManager sessionManager;
     private SqliteChallengeDAO challengeDAO;
     private SqliteSolutionDAO solutionDAO;
+    private AchievementService achievementService;
+    private ProgressReportExporter progressReportExporter;
 
     @FXML
     public void initialize() {
         sessionManager = SessionManager.getInstance();
         challengeDAO = new SqliteChallengeDAO();
         solutionDAO = new SqliteSolutionDAO();
+        achievementService = new AchievementService();
+        progressReportExporter = new ProgressReportExporter();
 
         configureCharts();
 
@@ -145,6 +154,41 @@ public class DashboardController {
                 stats.totalSubmissions(),
                 stats.hintsUsed()
         ));
+    }
+
+    @FXML
+    private void onExportProgress() {
+        User currentUser = sessionManager.getCurrentUser();
+        if (currentUser == null) {
+            showInfo("Export Progress", "Sign in to export your progress report.");
+            return;
+        }
+
+        ChoiceDialog<String> dialog = new ChoiceDialog<>("CSV", List.of("CSV", "PDF"));
+        dialog.setTitle("Export Progress");
+        dialog.setHeaderText("Choose a report format");
+        dialog.setContentText("Format:");
+
+        dialog.showAndWait().ifPresent(format -> exportProgress(currentUser, format));
+    }
+
+    private void exportProgress(User user, String format) {
+        List<Challenge> challenges = challengeDAO.getAllChallenges();
+        List<Solution> solutions = solutionDAO.getSolutionsByUserId(user.getId());
+        DashboardStats stats = buildStats(user, challenges, solutions);
+        List<Achievement> achievements = achievementService.evaluate(challenges, solutions, stats.hintsUsed());
+
+        try {
+            Path outputFile = "PDF".equals(format)
+                    ? progressReportExporter.exportPdf(user, challenges, solutions, achievements,
+                    progressReportExporter.downloadsDirectory())
+                    : progressReportExporter.exportCsv(user, challenges, solutions, achievements,
+                    progressReportExporter.downloadsDirectory());
+
+            showInfo("Export Progress", "Report saved to:\n" + outputFile);
+        } catch (IOException e) {
+            showInfo("Export Progress", "Could not export progress report: " + e.getMessage());
+        }
     }
 
     private void configureCharts() {
@@ -327,7 +371,7 @@ public class DashboardController {
     }
 
     private void renderAchievements(DashboardStats stats) {
-        List<String> achievements = buildAchievementLines(stats);
+        List<Achievement> achievements = buildAchievements(stats);
         String fallback = "Complete a challenge to unlock achievements.";
 
         if (achievements.isEmpty()) {
@@ -340,7 +384,7 @@ public class DashboardController {
             return;
         }
 
-        setLabelList(achievements,
+        setAchievementList(achievements,
                 achievement1Label,
                 achievement2Label,
                 achievement3Label,
@@ -348,18 +392,16 @@ public class DashboardController {
         );
     }
 
-    private List<String> buildAchievementLines(DashboardStats stats) {
-        return List.of(
-                        stats.completedChallenges() > 0 ? "First completion unlocked" : "",
-                        stats.totalChallenges() > 0 && stats.completedChallenges() == stats.totalChallenges()
-                                ? "All current challenges completed"
-                                : "",
-                        stats.totalSubmissions() >= 5 ? "Five submissions made" : "",
-                        stats.hintsUsed() == 0 && stats.completedChallenges() > 0 ? "Completed without hints" : ""
-                )
-                .stream()
-                .filter(line -> !line.isBlank())
+    private List<Achievement> buildAchievements(DashboardStats stats) {
+        return achievementService.evaluate(stats.challenges(), stats.solutions(), stats.hintsUsed()).stream()
+                .sorted(Comparator.comparing(Achievement::unlocked).reversed())
+                .limit(4)
                 .toList();
+    }
+
+    private String formatAchievementLine(Achievement achievement) {
+        String status = achievement.unlocked() ? "Unlocked" : "Locked";
+        return status + ": " + achievement.title() + "\n" + achievement.description();
     }
 
     private String formatLastSubmission(List<Solution> solutions) {
@@ -414,6 +456,25 @@ public class DashboardController {
         for (int index = 0; index < labels.length; index++) {
             String text = index < lines.size() ? lines.get(index) : "";
             setText(labels[index], text);
+        }
+    }
+
+    private void setAchievementList(List<Achievement> achievements, Label... labels) {
+        for (int index = 0; index < labels.length; index++) {
+            Label label = labels[index];
+            if (label == null) {
+                continue;
+            }
+
+            label.getStyleClass().removeAll("achievement-unlocked", "achievement-locked");
+            if (index >= achievements.size()) {
+                label.setText("");
+                continue;
+            }
+
+            Achievement achievement = achievements.get(index);
+            label.setText(formatAchievementLine(achievement));
+            label.getStyleClass().add(achievement.unlocked() ? "achievement-unlocked" : "achievement-locked");
         }
     }
 

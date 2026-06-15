@@ -112,3 +112,21 @@ Button.content-card:pressed,
 .chart-pie-label {
     -fx-fill: #e5e7eb;
 }
+
+.achievement-unlocked {
+    -fx-background-color: #17293a;
+    -fx-background-radius: 10px;
+    -fx-border-color: #16c99a;
+    -fx-border-radius: 10px;
+    -fx-padding: 10px;
+    -fx-text-fill: #f8fafc;
+}
+
+.achievement-locked {
+    -fx-background-color: #0f142b;
+    -fx-background-radius: 10px;
+    -fx-border-color: #2b3553;
+    -fx-border-radius: 10px;
+    -fx-padding: 10px;
+    -fx-text-fill: #8b91a8;
+}
