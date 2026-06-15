@@ -3,12 +3,16 @@ package com.example.syntaxio.ui.controller;
 import com.example.syntaxio.achievements.AchievementService;
 import com.example.syntaxio.database.SessionManager;
 import com.example.syntaxio.database.SqliteChallengeDAO;
+import com.example.syntaxio.database.SqliteHintDAO;
 import com.example.syntaxio.database.SqliteSolutionDAO;
 import com.example.syntaxio.export.ProgressReportExporter;
 import com.example.syntaxio.model.Achievement;
 import com.example.syntaxio.model.Challenge;
+import com.example.syntaxio.model.Hint;
 import com.example.syntaxio.model.Solution;
 import com.example.syntaxio.model.User;
+import com.example.syntaxio.progress.UserProgressReport;
+import com.example.syntaxio.progress.UserProgressService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -19,9 +23,14 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -73,16 +82,20 @@ public class DashboardController {
     private SessionManager sessionManager;
     private SqliteChallengeDAO challengeDAO;
     private SqliteSolutionDAO solutionDAO;
+    private SqliteHintDAO hintDAO;
     private AchievementService achievementService;
     private ProgressReportExporter progressReportExporter;
+    private UserProgressService userProgressService;
 
     @FXML
     public void initialize() {
         sessionManager = SessionManager.getInstance();
         challengeDAO = new SqliteChallengeDAO();
         solutionDAO = new SqliteSolutionDAO();
+        hintDAO = new SqliteHintDAO();
         achievementService = new AchievementService();
         progressReportExporter = new ProgressReportExporter();
+        userProgressService = new UserProgressService();
 
         configureCharts();
 
@@ -189,6 +202,48 @@ public class DashboardController {
         } catch (IOException e) {
             showInfo("Export Progress", "Could not export progress report: " + e.getMessage());
         }
+    }
+
+    @FXML
+    private void onReviewProgress() {
+        User currentUser = sessionManager.getCurrentUser();
+        if (currentUser == null) {
+            showInfo("Progress Review", "Sign in to review your progress.");
+            return;
+        }
+
+        List<Challenge> challenges = challengeDAO.getAllChallenges();
+        List<Solution> solutions = solutionDAO.getSolutionsByUserId(currentUser.getId());
+        List<Hint> hints = hintDAO.getUserHintHistory(currentUser.getId());
+        UserProgressReport report = userProgressService.buildReport(challenges, solutions, hints);
+
+        showProgressReview(report);
+    }
+
+    private void showProgressReview(UserProgressReport report) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Progress Review");
+        dialog.setHeaderText("Review your attempts, submissions, and hint history");
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().add(newReadOnlyTab("Attempt Review", report.attemptSummaryLines()));
+        tabPane.getTabs().add(newReadOnlyTab("Submission History", report.submissionHistoryLines()));
+        tabPane.getTabs().add(newReadOnlyTab("Hint Log", report.hintLogLines()));
+        tabPane.setPrefSize(760, 460);
+
+        dialog.getDialogPane().setContent(tabPane);
+        dialog.showAndWait();
+    }
+
+    private Tab newReadOnlyTab(String title, List<String> lines) {
+        TextArea textArea = new TextArea(String.join(System.lineSeparator(), lines));
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+
+        Tab tab = new Tab(title, textArea);
+        tab.setClosable(false);
+        return tab;
     }
 
     private void configureCharts() {

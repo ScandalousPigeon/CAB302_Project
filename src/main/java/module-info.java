@@ -17,4 +17,5 @@ module com.example.syntaxio {
     exports com.example.syntaxio.ai;
     exports com.example.syntaxio.achievements;
     exports com.example.syntaxio.export;
+    exports com.example.syntaxio.progress;
 }

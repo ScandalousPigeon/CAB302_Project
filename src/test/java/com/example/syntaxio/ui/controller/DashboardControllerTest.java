@@ -53,6 +53,16 @@ class DashboardControllerTest {
         assertEquals(void.class, handler.getReturnType());
     }
 
+    @Test
+    void reviewProgressButtonIsWiredToControllerHandler() throws Exception {
+        Element reviewButton = findButtonByText("Review Progress");
+        Method handler = DashboardController.class.getDeclaredMethod("onReviewProgress");
+
+        assertNotNull(reviewButton, "Dashboard should have a Review Progress button");
+        assertEquals("#onReviewProgress", reviewButton.getAttribute("onAction"));
+        assertEquals(void.class, handler.getReturnType());
+    }
+
     private static Element findButtonByText(String text) throws Exception {
         Document document = readFxml(DASHBOARD_FXML);
         NodeList buttons = document.getElementsByTagName("Button");
