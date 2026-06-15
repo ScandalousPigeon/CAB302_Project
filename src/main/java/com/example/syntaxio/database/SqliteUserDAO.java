@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public class SqliteUserDAO {
+    private static final int XP_PER_COMPLETED_CHALLENGE = 100;
     private static final String EMPTY_JSON = "{}";
     private static final String EMPTY_JSON_ARRAY = "[]";
     private static final ColumnDefinition[] PROGRESS_STAT_COLUMNS = {
@@ -136,6 +137,7 @@ public class SqliteUserDAO {
         List<String> columns = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         addColumnValue(columns, values, "username", user.getUsername());
+        addColumnValue(columns, values, "display_name", user.getDisplayName());
         addColumnValue(columns, values, "password_hash", user.getPasswordHash());
         addColumnValue(columns, values, "passwordHash", user.getPasswordHash());
         addColumnValue(columns, values, "created_at", formatDateTime(user.getCreatedAt()));
@@ -150,6 +152,8 @@ public class SqliteUserDAO {
         addColumnValue(columns, values, "totalChallengesCompleted", user.getTotalChallengesCompleted());
         addColumnValue(columns, values, "total_challenges_completed", user.getTotalChallengesCompleted());
         addColumnValue(columns, values, "current_activity_streak", user.getCurrentActivityStreak());
+        addColumnValue(columns, values, "experience_points", user.getExperiencePoints());
+        addColumnValue(columns, values, "last_puzzle_id", user.getLastPuzzleId());
 
         String sql = "INSERT INTO users (" + String.join(", ", columns)
                 + ") VALUES (" + placeholders(columns.size()) + ")";
@@ -232,6 +236,7 @@ public class SqliteUserDAO {
         List<String> assignments = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         addAssignmentValue(assignments, values, "username", user.getUsername());
+        addAssignmentValue(assignments, values, "display_name", user.getDisplayName());
         addAssignmentValue(assignments, values, "password_hash", user.getPasswordHash());
         addAssignmentValue(assignments, values, "passwordHash", user.getPasswordHash());
         addAssignmentValue(assignments, values, "last_login_at", formatDateTime(user.getLastLoginAt()));
@@ -244,6 +249,8 @@ public class SqliteUserDAO {
         addAssignmentValue(assignments, values, "totalChallengesCompleted", user.getTotalChallengesCompleted());
         addAssignmentValue(assignments, values, "total_challenges_completed", user.getTotalChallengesCompleted());
         addAssignmentValue(assignments, values, "current_activity_streak", user.getCurrentActivityStreak());
+        addAssignmentValue(assignments, values, "experience_points", user.getExperiencePoints());
+        addAssignmentValue(assignments, values, "last_puzzle_id", user.getLastPuzzleId());
 
         if (assignments.isEmpty()) {
             return false;
@@ -259,6 +266,32 @@ public class SqliteUserDAO {
             return affectedRows > 0;
         } catch (SQLException e) {
             System.err.println("Error updating user: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean updateLastPuzzle(int userId, String challengeId) {
+        if (!columnExists("last_puzzle_id") || challengeId == null || challengeId.isBlank()) {
+            return false;
+        }
+
+        List<String> assignments = new ArrayList<>();
+        List<Object> values = new ArrayList<>();
+        addAssignmentValue(assignments, values, "last_puzzle_id", challengeId);
+        addAssignmentValue(assignments, values, "updated_at", formatDateTime(LocalDateTime.now()));
+
+        if (assignments.isEmpty()) {
+            return false;
+        }
+
+        String sql = "UPDATE users SET " + String.join(", ", assignments) + " WHERE id = ?";
+        values.add(userId);
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            bindValues(pstmt, values);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating last puzzle: " + e.getMessage());
         }
         return false;
     }
@@ -344,10 +377,12 @@ public class SqliteUserDAO {
                 getInt(rs, "totalChallengesCompleted", 0),
                 getInt(rs, "total_challenges_completed", 0)
         );
+        int experiencePoints = getInt(rs, "experience_points", completedChallenges * XP_PER_COMPLETED_CHALLENGE);
 
         return new User(
             rs.getInt("id"),
             rs.getString("username"),
+            getString(rs, "display_name", null),
             getString(rs, "password_hash", "passwordHash"),
             createdAt,
             lastLoginAt,
@@ -355,7 +390,9 @@ public class SqliteUserDAO {
             loginCount,
             rs.getInt("totalHintsUsed"),
             completedChallenges,
-            getInt(rs, "current_activity_streak", 0)
+            getInt(rs, "current_activity_streak", 0),
+            experiencePoints,
+            getString(rs, "last_puzzle_id", null)
         );
     }
     
@@ -379,11 +416,14 @@ public class SqliteUserDAO {
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
+                display_name TEXT,
                 password_hash TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 last_login_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 login_count INTEGER DEFAULT 0,
+                experience_points INTEGER DEFAULT 0,
+                last_puzzle_id TEXT,
                 totalHintsUsed INTEGER DEFAULT 0,
                 totalChallengesCompleted INTEGER DEFAULT 0""");
 
@@ -403,11 +443,14 @@ public class SqliteUserDAO {
 
     private void ensureUserColumns() throws SQLException {
         refreshUserColumns();
+        addColumnIfMissing("display_name", "TEXT");
         addColumnIfMissing("password_hash", "TEXT");
         addColumnIfMissing("created_at", "TEXT");
         addColumnIfMissing("last_login_at", "TEXT");
         addColumnIfMissing("updated_at", "TEXT");
         addColumnIfMissing("login_count", "INTEGER DEFAULT 0");
+        addColumnIfMissing("experience_points", "INTEGER DEFAULT 0");
+        addColumnIfMissing("last_puzzle_id", "TEXT");
         for (ColumnDefinition column : PROGRESS_STAT_COLUMNS) {
             addColumnIfMissing(column.name(), column.definition());
         }
@@ -441,6 +484,10 @@ public class SqliteUserDAO {
             executeUpdate("UPDATE users SET password_hash = passwordHash WHERE password_hash IS NULL");
         }
 
+        if (columnExists("display_name")) {
+            executeUpdate("UPDATE users SET display_name = username WHERE display_name IS NULL OR display_name = ''");
+        }
+
         if (columnExists("created_at") && columnExists("createdAt")) {
             executeUpdate("UPDATE users SET created_at = createdAt WHERE created_at IS NULL");
         }
@@ -467,8 +514,13 @@ public class SqliteUserDAO {
             executeUpdate("UPDATE users SET login_count = 0 WHERE login_count IS NULL");
         }
 
+        if (columnExists("experience_points")) {
+            executeUpdate("UPDATE users SET experience_points = 0 WHERE experience_points IS NULL");
+        }
+
         backfillProgressStatDefaults();
         syncProgressStatAliases();
+        syncExperiencePoints();
     }
 
     private void backfillProgressStatDefaults() throws SQLException {
@@ -505,6 +557,15 @@ public class SqliteUserDAO {
         String maxExpression = "MAX(COALESCE(" + firstColumn + ", 0), COALESCE(" + secondColumn + ", 0))";
         executeUpdate("UPDATE users SET " + firstColumn + " = " + maxExpression);
         executeUpdate("UPDATE users SET " + secondColumn + " = " + maxExpression);
+    }
+
+    private void syncExperiencePoints() throws SQLException {
+        if (!columnExists("experience_points") || !columnExists("total_challenges_completed")) {
+            return;
+        }
+
+        executeUpdate("UPDATE users SET experience_points = MAX(COALESCE(experience_points, 0), "
+                + "COALESCE(total_challenges_completed, 0) * " + XP_PER_COMPLETED_CHALLENGE + ")");
     }
 
     private void backfillLastLoginDate() throws SQLException {

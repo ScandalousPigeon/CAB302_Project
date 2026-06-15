@@ -49,7 +49,6 @@ public class MainMenuController {
     private static final int SUGGESTED_PUZZLE_COLUMNS = 2;
     private static final int SUGGESTED_DESCRIPTION_LIMIT = 90;
     private static final double SUGGESTED_CARD_HEIGHT = 100.0;
-    private static final int XP_PER_COMPLETED_CHALLENGE = 100;
     private static final int XP_PER_LEVEL = 1000;
     private static final DateTimeFormatter UPDATED_AT_FORMATTER =
             DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.ENGLISH);
@@ -183,13 +182,12 @@ public class MainMenuController {
             return;
         }
 
-        int completedChallenges = Math.max(0, user.getTotalChallengesCompleted());
-        int totalXp = completedChallenges * XP_PER_COMPLETED_CHALLENGE;
+        int totalXp = Math.max(0, user.getExperiencePoints());
         int level = calculateLevel(totalXp);
         int nextLevelXp = level * XP_PER_LEVEL;
         int streak = Math.max(0, user.getCurrentActivityStreak());
 
-        setText(profileUsernameText, user.getUsername());
+        setText(profileUsernameText, user.getDisplayName());
         setText(profileStreakText, String.format(Locale.ENGLISH,
                 "%d Day%s Streak",
                 streak,
