@@ -35,6 +35,7 @@ import javafx.util.Duration;
 import static com.example.syntaxio.ui.util.ScreenManager.switchScreen;
 
 import java.io.IOException;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -52,6 +53,8 @@ public class MainMenuController {
     private static final int XP_PER_LEVEL = 1000;
     private static final DateTimeFormatter UPDATED_AT_FORMATTER =
             DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter CHAT_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
 
     @FXML
     private VBox popoutMenu;
@@ -82,6 +85,9 @@ public class MainMenuController {
 
     @FXML
     private Button sendButton;
+
+    @FXML
+    private Text assistantStatusText;
 
     @FXML
     private GridPane suggestedPuzzlesGrid;
@@ -159,9 +165,9 @@ public class MainMenuController {
             }
         });
 
-        chatInput.setOnAction(event -> handleSendMessage());
+        configureChatControls();
         addMessageBubble(
-                "Hi! I'm your AI coding assistant. Ask me anything about algorithms or data structures!",
+                "Hi! I'm your AI coding assistant. Ask me about Java, algorithms, data structures, or what to practice next.",
                 false
         );
 
@@ -349,6 +355,7 @@ public class MainMenuController {
         addMessageBubble(userMessage, true);
 
         Label pendingBubble = addMessageBubble("Thinking...", false);
+        setText(assistantStatusText, "Thinking...");
         setChatControlsDisabled(true);
 
         Task<String> replyTask = new Task<>() {
@@ -363,6 +370,7 @@ public class MainMenuController {
             pendingBubble.setText(reply == null || reply.isBlank()
                     ? "I couldn't generate a response. Please try again."
                     : reply.trim());
+            setText(assistantStatusText, "Online");
             setChatControlsDisabled(false);
             scrollToLatestMessage();
         });
@@ -371,6 +379,7 @@ public class MainMenuController {
             pendingBubble.setText("I couldn't reach Ollama yet. It may still be starting, or "
                     + OllamaClient.DEFAULT_MODEL
                     + " may still be downloading. Make sure Ollama is installed if this keeps happening.");
+            setText(assistantStatusText, "Offline");
             setChatControlsDisabled(false);
             scrollToLatestMessage();
         });
@@ -378,6 +387,16 @@ public class MainMenuController {
         Thread replyThread = new Thread(replyTask, "main-menu-assistant-reply");
         replyThread.setDaemon(true);
         replyThread.start();
+    }
+
+    private void configureChatControls() {
+        if (chatInput == null || sendButton == null) {
+            return;
+        }
+
+        chatInput.setOnAction(event -> handleSendMessage());
+        chatInput.textProperty().addListener((obs, oldValue, newValue) -> updateSendButtonState());
+        updateSendButtonState();
     }
 
     private Label addMessageBubble(String message, boolean fromUser) {
@@ -403,7 +422,15 @@ public class MainMenuController {
         row.prefWidthProperty().bind(chatContent.widthProperty());
         row.getStyleClass().add(fromUser ? "user-message-row" : "bot-message-row");
 
-        chatContent.getChildren().add(row);
+        Label metaLabel = new Label((fromUser ? "You" : "Syntaxio") + " • "
+                + LocalTime.now().format(CHAT_TIME_FORMATTER));
+        metaLabel.getStyleClass().add(fromUser ? "user-message-meta" : "bot-message-meta");
+
+        VBox messageGroup = new VBox(4);
+        messageGroup.getChildren().addAll(row, metaLabel);
+        messageGroup.getStyleClass().add(fromUser ? "user-message-group" : "bot-message-group");
+
+        chatContent.getChildren().add(messageGroup);
         scrollToLatestMessage();
 
         return bubble;
@@ -411,7 +438,13 @@ public class MainMenuController {
 
     private void setChatControlsDisabled(boolean disabled) {
         chatInput.setDisable(disabled);
-        sendButton.setDisable(disabled);
+        sendButton.setDisable(disabled || chatInput.getText().trim().isEmpty());
+    }
+
+    private void updateSendButtonState() {
+        if (sendButton != null && chatInput != null) {
+            sendButton.setDisable(chatInput.getText().trim().isEmpty());
+        }
     }
 
     private void scrollToLatestMessage() {
