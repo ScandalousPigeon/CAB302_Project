@@ -1,0 +1,78 @@
+.preferences-card {
+    -fx-background-color: #14192c;
+    -fx-background-radius: 14px;
+    -fx-border-color: #2b3553;
+    -fx-border-width: 1px;
+    -fx-border-radius: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 16, 0.2, 0, 4);
+}
+
+.preference-label {
+    -fx-text-fill: #c8d6e5;
+    -fx-font-size: 14px;
+}
+
+.preference-combo {
+    -fx-background-color: #0f142b;
+    -fx-border-color: #2b3553;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-mark-color: #ffc700;
+}
+
+.preference-combo .list-cell {
+    -fx-background-color: #0f142b;
+    -fx-text-fill: #f8fafc;
+}
+
+.preference-combo .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.preference-checkbox {
+    -fx-font-size: 14px;
+}
+
+.preference-checkbox .box {
+    -fx-background-color: #0f142b;
+    -fx-border-color: #2b3553;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.preference-checkbox:selected .mark {
+    -fx-background-color: #0a0e27;
+}
+
+.preference-checkbox:selected .box {
+    -fx-background-color: #ffc700;
+    -fx-border-color: #ffc700;
+}
+
+.primary-button {
+    -fx-background-color: #ffa300;
+    -fx-background-radius: 12px;
+    -fx-text-fill: #0a0e27;
+    -fx-font-size: 15px;
+    -fx-cursor: hand;
+}
+
+.primary-button:hover {
+    -fx-background-color: #ffc247;
+}
+
+.secondary-button {
+    -fx-background-color: #14192c;
+    -fx-background-radius: 12px;
+    -fx-border-color: #2b3553;
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+}
+
+.secondary-button:hover {
+    -fx-border-color: #ffc770;
+    -fx-text-fill: #ffc770;
+}

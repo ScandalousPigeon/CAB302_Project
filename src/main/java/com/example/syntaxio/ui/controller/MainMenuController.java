@@ -66,6 +66,9 @@ public class MainMenuController {
     private HBox challengeBrowserButton;
 
     @FXML
+    private HBox profileButton;
+
+    @FXML
     private HBox logoutButton;
 
     @FXML
@@ -436,6 +439,11 @@ public class MainMenuController {
     @FXML
     private void handleDashboard(MouseEvent event) throws IOException {
         switchScreen(event, "/com/example/syntaxio/dashboard.fxml", 1200, 1000);
+    }
+
+    @FXML
+    private void handleProfile(MouseEvent event) throws IOException {
+        switchScreen(event, "/com/example/syntaxio/profile-page.fxml", 1000, 760);
     }
 
     @FXML

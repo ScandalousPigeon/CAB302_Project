@@ -30,6 +30,7 @@ class UiPageLoadTest {
             "/com/example/syntaxio/login-screen.fxml",
             "/com/example/syntaxio/sign-up.fxml",
             "/com/example/syntaxio/main-menu.fxml",
+            "/com/example/syntaxio/profile-page.fxml",
             "/com/example/syntaxio/dashboard.fxml",
             "/com/example/syntaxio/coding-challenge-browser.fxml",
             "/com/example/syntaxio/coding-challenge.fxml"

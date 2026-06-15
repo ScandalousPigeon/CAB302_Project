@@ -86,6 +86,8 @@ class MainMenuControllerTest {
 
         assertAll(
                 () -> assertTrue(fxml.contains("fx:id=\"profileLevelBadge\"")),
+                () -> assertTrue(fxml.contains("fx:id=\"profileButton\"")),
+                () -> assertTrue(fxml.contains("onMouseClicked=\"#handleProfile\"")),
                 () -> assertTrue(fxml.contains("fx:id=\"profileUsernameText\"")),
                 () -> assertTrue(fxml.contains("fx:id=\"profileStreakText\"")),
                 () -> assertTrue(fxml.contains("fx:id=\"profileXpText\"")),
