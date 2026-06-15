@@ -55,6 +55,13 @@ public class AiSafetyGuardrail {
         return GuardrailDecision.allowed();
     }
 
+    public void requireSafeUserMessage(String message) {
+        GuardrailDecision decision = assessUserMessage(message);
+        if (!decision.permitted()) {
+            throw new AiSafetyViolationException(decision.reason());
+        }
+    }
+
     public String applyToPrompt(String prompt) {
         if (prompt == null || prompt.isBlank()) {
             throw new AiSafetyViolationException("Prompt cannot be empty.");
@@ -69,6 +76,13 @@ public class AiSafetyGuardrail {
         }
 
         return assessModelContent(response).permitted() ? response : REFUSAL_MESSAGE;
+    }
+
+    public void requireSafeModelContent(String response) {
+        GuardrailDecision decision = assessModelContent(response);
+        if (!decision.permitted()) {
+            throw new AiSafetyViolationException(decision.reason());
+        }
     }
 
     private GuardrailDecision assessModelContent(String response) {

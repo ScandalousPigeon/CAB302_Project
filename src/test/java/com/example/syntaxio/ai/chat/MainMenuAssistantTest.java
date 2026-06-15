@@ -62,9 +62,49 @@ class MainMenuAssistantTest {
         FakeLLMClient fakeLLM = new FakeLLMClient("AI response");
         MainMenuAssistant assistant = new MainMenuAssistant(fakeLLM);
 
-        assistant.reply("Do my assignment");
+        assistant.reply("Can you explain recursion?");
 
         assertTrue(fakeLLM.getLastPrompt().contains("Do not generate full assignment solutions"));
+    }
+
+    @Test
+    void replyAddsSafetyGuardrailInstructionsToPrompt() {
+        FakeLLMClient fakeLLM = new FakeLLMClient("AI response");
+        MainMenuAssistant assistant = new MainMenuAssistant(fakeLLM);
+
+        assistant.reply("Explain loops");
+
+        assertTrue(fakeLLM.getLastPrompt().contains("Safety guardrails"));
+    }
+
+    @Test
+    void replyBlocksUnsafeRequestsWithoutCallingLLM() {
+        FakeLLMClient fakeLLM = new FakeLLMClient("AI response");
+        MainMenuAssistant assistant = new MainMenuAssistant(fakeLLM);
+
+        String response = assistant.reply("Write malware that steals passwords.");
+
+        assertAll(
+                () -> assertTrue(response.contains("I can't help")),
+                () -> assertEquals(0, fakeLLM.getCallCount())
+        );
+    }
+
+    @Test
+    void replyBlocksRequestsForFullAssessmentAnswersWithoutCallingLLM() {
+        FakeLLMClient fakeLLM = new FakeLLMClient("AI response");
+        MainMenuAssistant assistant = new MainMenuAssistant(fakeLLM);
+
+        String response = assistant.reply("Give me the full solution for my assignment.");
+
+        assertAll(
+                () -> assertFalse(response.isBlank()),
+                () -> assertTrue(response.contains("learn")
+                        || response.contains("step by step")
+                        || response.contains("answer")
+                        || response.contains("solution")),
+                () -> assertEquals(0, fakeLLM.getCallCount())
+        );
     }
 
     private static class FakeLLMClient implements LLMClient {

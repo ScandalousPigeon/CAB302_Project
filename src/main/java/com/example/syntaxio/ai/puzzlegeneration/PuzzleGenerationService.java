@@ -1,6 +1,8 @@
 package com.example.syntaxio.ai.puzzlegeneration;
 
 import com.example.syntaxio.ai.client.LLMClient;
+import com.example.syntaxio.ai.safety.AiSafetyGuardrail;
+import com.example.syntaxio.ai.safety.AiSafetyViolationException;
 import com.example.syntaxio.model.GeneratedPuzzle;
 import com.example.syntaxio.model.TestCase;
 
@@ -9,14 +11,24 @@ import java.util.List;
 public class PuzzleGenerationService {
 
     private final LLMClient llmClient;
+    private final AiSafetyGuardrail safetyGuardrail;
 
     public PuzzleGenerationService(LLMClient llmClient) {
         this.llmClient = llmClient;
+        this.safetyGuardrail = new AiSafetyGuardrail();
     }
 
     public GeneratedPuzzle generatePuzzle(String topic, String difficulty) {
+        safetyGuardrail.requireSafeUserMessage(topic);
+        safetyGuardrail.requireSafeUserMessage(difficulty);
+
         String prompt = buildPrompt(topic, difficulty);
-        String response = llmClient.generate(prompt);
+        String response = llmClient.generate(safetyGuardrail.applyToPrompt(prompt));
+        try {
+            safetyGuardrail.requireSafeModelContent(response);
+        } catch (AiSafetyViolationException e) {
+            throw new IllegalArgumentException("Generated puzzle response failed safety guardrail.", e);
+        }
 
         return parseGeneratedPuzzle(response);
     }

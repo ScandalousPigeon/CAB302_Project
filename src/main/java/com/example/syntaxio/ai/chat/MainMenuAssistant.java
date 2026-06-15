@@ -1,16 +1,25 @@
 package com.example.syntaxio.ai.chat;
 
 import com.example.syntaxio.ai.client.LLMClient;
+import com.example.syntaxio.ai.safety.AiSafetyGuardrail;
+import com.example.syntaxio.ai.safety.GuardrailDecision;
 
 public class MainMenuAssistant {
 
     private final LLMClient llmClient;
+    private final AiSafetyGuardrail safetyGuardrail;
 
     public MainMenuAssistant(LLMClient llmClient) {
         this.llmClient = llmClient;
+        this.safetyGuardrail = new AiSafetyGuardrail();
     }
 
     public String reply(String userMessage) {
+        GuardrailDecision decision = safetyGuardrail.assessUserMessage(userMessage);
+        if (!decision.permitted()) {
+            return decision.safeResponse();
+        }
+
         String prompt = """
                 You are the friendly AI assistant for Syntaxio, a beginner coding practice app.
 
@@ -22,6 +31,7 @@ public class MainMenuAssistant {
                 %s
                 """.formatted(userMessage);
 
-        return llmClient.generate(prompt);
+        String response = llmClient.generate(safetyGuardrail.applyToPrompt(prompt));
+        return safetyGuardrail.safeChatResponse(response);
     }
 }
